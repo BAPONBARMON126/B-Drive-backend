@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>B-Drive</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{ --green:#00ff66; }
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:#000;
+  color:var(--green);
+  font-family:"Courier New", monospace;
+}
+
+/* HEADER */
+header{
+  padding:14px;
+  text-align:center;
+  font-size:22px;
+  border-bottom:1px solid var(--green);
+  text-shadow:0 0 10px var(--green);
+}
+
+/* ================= LOGIN (ADDED) ================= */
+.login-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.95);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:10000;
+}
+.login-box{
+  border:2px solid var(--green);
+  padding:20px;
+  border-radius:14px;
+  width:90%;
+  max-width:320px;
+  text-align:center;
+  box-shadow:0 0 20px var(--green);
+}
+.login-box h3{
+  margin-bottom:14px;
+}
+.login-box input{
+  width:100%;
+  padding:10px;
+  background:#000;
+  border:1px solid var(--green);
+  color:var(--green);
+  border-radius:999px;
+  outline:none;
+  text-align:center;
+}
+.login-box button{
+  margin-top:14px;
+  width:100%;
+  padding:8px;
+  border-radius:999px;
+  border:1px solid var(--green);
+  background:transparent;
+  color:var(--green);
+  cursor:pointer;
+}
+.login-box button:hover{
+  background:var(--green);
+  color:#000;
+}
+.login-error{
+  margin-top:10px;
+  color:red;
+  display:none;
+}
+
+/* ================= STATUS BAR ================= */
+.status{
+  display:flex;
+  justify-content:center;
+  padding:10px;
+}
+.status-box{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 14px;
+  border:1px solid var(--green);
+  border-radius:999px;
+  font-size:12px;
+}
+.spinner{
+  width:14px;height:14px;
+  border:2px solid #003d1f;
+  border-top:2px solid var(--green);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{100%{transform:rotate(360deg)}}
+.tick{display:none;font-weight:bold}
+
+/* CONTAINER */
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:16px;
+}
+
+/* TOOLBAR */
+.toolbar{
+  display:flex;
+  justify-content:center;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.toolbar button{
+  background:transparent;
+  color:var(--green);
+  border:1px solid var(--green);
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  cursor:pointer;
+}
+.toolbar button:hover{background:var(--green);color:#000}
+
+/* PROGRESS BAR */
+.progress-box{
+  display:none;
+  border:1px solid var(--green);
+  border-radius:10px;
+  padding:6px;
+  margin-bottom:12px;
+}
+.progress{
+  height:8px;
+  background:#003d1f;
+  border-radius:10px;
+  overflow:hidden;
+}
+.progress-bar{
+  height:100%;
+  width:0%;
+  background:var(--green);
+}
+.cancel-btn{
+  margin-top:6px;
+  background:transparent;
+  color:red;
+  border:1px solid red;
+  padding:3px 10px;
+  border-radius:999px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+/* IMAGE GRID */
+.thumb-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
+  gap:10px;
+  margin-bottom:16px;
+}
+.thumb{
+  position:relative;
+  border:1px solid #003d1f;
+  padding:5px;
+  border-radius:8px;
+  background:#020e07;
+}
+.thumb img{
+  width:100%;
+  height:65px;
+  object-fit:cover;
+  border-radius:6px;
+  cursor:pointer;
+}
+.thumb-name{
+  margin-top:3px;
+  font-size:10px;
+  white-space:nowrap;
+  overflow:hidden;
+}
+
+/* FILE LIST */
+.file-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px;
+  border-bottom:1px solid #003d1f;
+}
+.file-row:hover{ background:#021a0c; }
+.filename{
+  max-width:260px;
+  overflow:hidden;
+  white-space:nowrap;
+}
+
+/* MENU */
+.menu{ position:relative; }
+.menu-btn{ cursor:pointer; font-size:16px; }
+.menu-box{
+  display:none;
+  position:absolute;
+  right:0;
+  top:20px;
+  background:#000;
+  border:1px solid var(--green);
+  min-width:130px;
+  z-index:99;
+}
+.menu-box div{
+  padding:8px 12px;
+  cursor:pointer;
+  user-select:none;
+  font-size:12px;
+}
+.menu-box div:hover{ background:var(--green); color:#000 }
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.85);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+.modal-box{
+  background:#000;
+  border:2px solid var(--green);
+  padding:12px;
+  width:90%;
+  max-width:700px;
+}
+.modal-box img,
+.modal-box iframe,
+.modal-box video,
+.modal-box audio{
+  max-width:100%;
+  max-height:60vh;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN OVERLAY (ADDED) -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h3>Enter your password</h3>
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="checkLogin()">Login</button>
+    <div class="login-error" id="loginError">Password incorrect</div>
+  </div>
+</div>
+
+<header>âï¸ B-Drive</header>
+
+<div class="status">
+  <div class="status-box">
+    <div class="spinner" id="spinner"></div>
+    <div class="tick" id="tick">â</div>
+    <span id="statusText">Connectingâ¦</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="toolbar">
+    <button onclick="goHome()">Home</button>
+    <button onclick="goBack()">Back</button>
+    <button onclick="createFolder()">New Folder</button>
+    <button onclick="pickFile()">Upload</button>
+    <button onclick="refreshList()">Refresh</button>
+  </div>
+
+  <div class="progress-box" id="progressBox">
+    <div class="progress">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <button class="cancel-btn" onclick="cancelUpload()">Cancel Upload</button>
+  </div>
+
+  <input type="file" id="fileInput" multiple hidden>
+
+  <div id="thumbGrid" class="thumb-grid"></div>
+  <div id="fileList"></div>
+</div>
+
+<div class="modal" id="viewer">
+  <div class="modal-box">
+    <button onclick="closeViewer()">Close</button>
+    <div id="viewerBody"></div>
+  </div>
+</div>
+
+<script>
+/* ================= LOGIN LOGIC (ADDED ONLY) ================= */
+function checkLogin(){
+  const pwd=document.getElementById("loginPassword").value;
+  const err=document.getElementById("loginError");
+  if(pwd==="1234"){
+    document.getElementById("loginOverlay").style.display="none";
+  }else{
+    err.style.display="block";
+    setTimeout(()=>err.style.display="none",1500);
+  }
+}
+
+/* ================= EXISTING JS (UNCHANGED) ================= */
+const API="https://b-drive-backend.onrender.com";
+let currentPath="storage";
+let history=[];
+let currentXHR=null;
+
+/* CONNECT */
+(async()=>{
+  try{
+    await fetch(API+"/ping");
+    spinner.style.display="none";
+    tick.style.display="block";
+    statusText.textContent="Connected";
+    loadList();
+  }catch{
+    statusText.textContent="Offline";
+  }
+})();
+
+function isImage(name){ return /\.(png|jpg|jpeg|webp|gif)$/i.test(name); }
+function getURL(i){ return i.download_url || `https://raw.githubusercontent.com/${i.path}`; }
+
+/* LOAD */
+async function loadList(path=currentPath){
+  currentPath=path;
+  const r=await fetch(API+"/list?path="+path);
+  let items=await r.json();
+  if(!Array.isArray(items)) items=[items];
+  render(items);
+}
+function refreshList(){ loadList(currentPath); }
+
+/* RENDER */
+function render(items){
+  fileList.innerHTML="";
+  thumbGrid.innerHTML="";
+  items.forEach(i=>{
+    if(i.type==="file" && isImage(i.name)){
+      const t=document.createElement("div");
+      t.className="thumb";
+      t.innerHTML=`
+        <img src="${getURL(i)}" onclick="openPreview('${getURL(i)}','${i.name}')">
+        <div class="thumb-name">${i.name}</div>
+        <div class="menu">
+          <span class="menu-btn">â®</span>
+          <div class="menu-box">
+            <div onclick="openPreview('${getURL(i)}','${i.name}')">Preview</div>
+            <div onclick="downloadFile('${getURL(i)}','${i.name}')">Download</div>
+            <div onclick="deleteItem('${i.path}','file','${i.sha||""}')">Delete</div>
+          </div>
+        </div>
+      `;
+      t.querySelector(".menu-btn").onclick=e=>{
+        e.stopPropagation();
+        closeMenus();
+        t.querySelector(".menu-box").style.display="block";
+      };
+      thumbGrid.appendChild(t);
+      return;
+    }
+
+    const row=document.createElement("div");
+    row.className="file-row";
+    row.innerHTML=`
+      <span class="filename">${i.type==="dir"?"ð ":""}${i.name}</span>
+      <div class="menu">
+        <span class="menu-btn">â®</span>
+        <div class="menu-box">
+          ${i.type==="file"?`<div onclick="openPreview('${getURL(i)}','${i.name}')">Preview</div>`:""}
+          ${i.type==="file"?`<div onclick="downloadFile('${getURL(i)}','${i.name}')">Download</div>`:""}
+          <div onclick="deleteItem('${i.path}','${i.type}','${i.sha||""}')">Delete</div>
+        </div>
+      </div>
+    `;
+    row.onclick=e=>{
+      if(e.target.closest(".menu")) return;
+      if(i.type==="dir"){ history.push(currentPath); loadList(i.path); }
+    };
+    row.querySelector(".menu-btn").onclick=e=>{
+      e.stopPropagation();
+      closeMenus();
+      row.querySelector(".menu-box").style.display="block";
+    };
+    fileList.appendChild(row);
+  });
+}
+
+/* MENU CLOSE */
+document.addEventListener("click",closeMenus);
+function closeMenus(){
+  document.querySelectorAll(".menu-box").forEach(m=>m.style.display="none");
+}
+
+/* UPLOAD WITH CANCEL */
+function pickFile(){ fileInput.click(); }
+fileInput.onchange=()=>{
+  [...fileInput.files].forEach(f=>{
+    const fd=new FormData();
+    fd.append("file",f);
+    fd.append("path",currentPath);
+
+    const xhr=new XMLHttpRequest();
+    currentXHR=xhr;
+
+    xhr.upload.onprogress=e=>{
+      progressBox.style.display="block";
+      progressBar.style.width=(e.loaded/e.total*100)+"%";
+    };
+    xhr.onload=()=>{
+      progressBox.style.display="none";
+      progressBar.style.width="0%";
+      currentXHR=null;
+      loadList(currentPath);
+    };
+    xhr.onerror=()=>cancelUpload();
+
+    xhr.open("POST",API+"/upload");
+    xhr.send(fd);
+  });
+};
+function cancelUpload(){
+  if(currentXHR){
+    currentXHR.abort();
+    currentXHR=null;
+  }
+  progressBox.style.display="none";
+  progressBar.style.width="0%";
+}
+
+/* PREVIEW */
+function openPreview(url,name){
+  let html="Preview not supported";
+  if(/\.(png|jpg|jpeg|webp|gif)$/i.test(url))
+    html=`<img src="${url}">`;
+  else if(/\.pdf$/i.test(url))
+    html=`<iframe src="${url}" width="100%" height="400"></iframe>`;
+  else if(/\.(mp3|wav)$/i.test(url))
+    html=`<audio src="${url}" controls></audio>`;
+  else if(/\.(mp4|webm)$/i.test(url))
+    html=`<video src="${url}" controls></video>`;
+  else if(/\.(docx|xlsx|pptx)$/i.test(url))
+    html=`<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}" width="100%" height="400"></iframe>`;
+  viewerBody.innerHTML=html;
+  viewer.style.display="flex";
+}
+function closeViewer(){ viewer.style.display="none"; }
+
+/* DOWNLOAD */
+function downloadFile(url,name){
+  const a=document.createElement("a");
+  a.href=url; a.download=name; a.click();
+}
+
+/* DELETE */
+async function deleteItem(path,type,sha){
+  if(!confirm("Delete permanently?"))return;
+  if(type==="file"){
+    await fetch(API+"/delete",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({path,sha})});
+  }else{
+    const r=await fetch(API+"/list?path="+path);
+    const items=await r.json();
+    for(const it of items) await deleteItem(it.path,it.type,it.sha);
+  }
+  loadList(currentPath);
+}
+
+/* NAV */
+function goBack(){ if(history.length) loadList(history.pop()); }
+function goHome(){ history=[]; loadList("storage"); }
+function createFolder(){
+  const n=prompt("Folder name?");
+  if(!n)return;
+  fetch(API+"/folder",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:currentPath+"/"+n})})
+  .then(()=>loadList(currentPath));
+}
+</script>
+
+</body>
+</html>
