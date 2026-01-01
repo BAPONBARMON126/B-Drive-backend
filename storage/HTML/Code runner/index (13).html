@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Code Runner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ===== PAGE ===== */
+html,body{
+  margin:0;
+  padding:0;
+  height:100dvh;
+  background:#000;
+  font-family:Consolas, monospace;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ===== TOOLBAR ===== */
+.toolbar{
+  display:flex;
+  gap:6px;
+  padding:8px;
+  justify-content:center;
+  align-items:center;
+  border-bottom:1px solid #00ff7f55;
+}
+
+/* ===== BUTTON STYLE ===== */
+.ctrl-btn,
+.find-input,
+.toggle-btn{
+  width:72px;
+  height:36px;
+  background:#000;
+  color:#00ff7f;
+  border:2px solid #00ff7f;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.toggle-btn{ width:90px; }
+
+/* ===== RUN BUTTON ===== */
+.run-btn{
+  flex:1;
+  height:40px;
+  background:#00ff7f;
+  color:#000;
+  border:none;
+  border-radius:14px;
+  font-size:15px;
+  font-weight:900;
+}
+
+/* ===== BUTTON GLOW ===== */
+.btn-pressed{
+  box-shadow:0 0 14px #00ff7f;
+  transform:scale(0.96);
+}
+
+/* ===== FIND ===== */
+.find-input{
+  outline:none;
+  text-align:center;
+}
+.find-input:focus::placeholder{color:transparent}
+
+/* ===== EDITOR ===== */
+.editor-wrapper{
+  flex:1;
+  min-height:0;
+  position:relative;
+}
+#editor,
+#mobileEditor{
+  width:100%;
+  height:100%;
+}
+#mobileEditor{
+  display:none;
+  background:#000;
+  color:#00ff7f;
+  border:none;
+  outline:none;
+  resize:none;
+  padding:10px;
+  font-family:Consolas, monospace;
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* ===== RUN BAR ===== */
+.run-bar{
+  padding:8px;
+  border-top:1px solid #00ff7f55;
+  display:flex;
+  gap:8px;
+}
+
+/* ===== RUNNER ===== */
+#runner{
+  position:fixed;
+  inset:0;
+  background:#000;
+  display:none;
+  flex-direction:column;
+  z-index:9999;
+}
+.runner-bar{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  padding:6px;
+  background:#050505;
+  border-bottom:2px solid #00ff7f88;
+}
+#output{
+  flex:1;
+  border:none;
+  background:#fff;
+}
+
+/* ===== COPY TOAST ===== */
+#copyToast{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#00000088;
+  opacity:0;
+  pointer-events:none;
+  transition:.25s;
+}
+#copyToast span{
+  background:#00ff7f;
+  color:#000;
+  padding:16px 28px;
+  border-radius:16px;
+  font-weight:900;
+}
+#copyToast.show{opacity:1}
+
+/* ===== FIND HIGHLIGHT ===== */
+.monaco-editor .findMatch{
+  background:#ffff00 !important;
+  color:#000 !important;
+}
+.monaco-editor .currentFindMatch{
+  background:#ffeb3b !important;
+  color:#000 !important;
+}
+
+/* ===== FORCE SELECTION ===== */
+.monaco-editor,
+.monaco-editor *{
+  -webkit-user-select:text !important;
+  user-select:text !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+</head>
+
+<body>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="ctrl-btn" onclick="pasteCode()">Paste</button>
+  <button class="ctrl-btn" onclick="clearCode()">Clear</button>
+  <button class="ctrl-btn" onclick="copyAllCode()">Copy</button>
+  <button class="ctrl-btn" onclick="undoCode()">Undo</button>
+  <button class="ctrl-btn" onclick="redoCode()">Redo</button>
+  <input class="find-input" placeholder="Find" oninput="findText(this.value)">
+</div>
+
+<div class="editor-wrapper">
+  <div id="editor"></div>
+  <textarea id="mobileEditor"></textarea>
+</div>
+
+<!-- RUN BAR -->
+<div class="run-bar">
+  <button class="toggle-btn" id="toggleBtn" onclick="toggleMonaco()">Monaco ON</button>
+  <button class="run-btn" onclick="runCode()">Run Code</button>
+</div>
+
+<div id="runner">
+  <div class="runner-bar">
+    <button class="ctrl-btn" onclick="refreshRun()">Refresh</button>
+    <button class="ctrl-btn" onclick="closeRun()">Close</button>
+  </div>
+  <iframe id="output"></iframe>
+</div>
+
+<div id="copyToast"><span>Copy Successfully</span></div>
+
+<script>
+let editor;
+let monacoEnabled = true;
+const mobileEditor = document.getElementById('mobileEditor');
+const toggleBtn = document.getElementById('toggleBtn');
+
+/* ===== MONACO INIT ===== */
+require.config({ paths:{vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'} });
+
+require(['vs/editor/editor.main'],function(){
+  editor = monaco.editor.create(
+    document.getElementById('editor'),
+    {
+      value:`<!DOCTYPE html>
+<html>
+<body>
+<h1>Hello World</h1>
+</body>
+</html>`,
+      language:'html',
+      theme:'vs-dark',
+      automaticLayout:true,
+      minimap:{enabled:false},
+      contextmenu:false
+    }
+  );
+});
+
+/* ===== TOGGLE LOGIC ===== */
+function toggleMonaco(){
+  monacoEnabled = !monacoEnabled;
+  toggleBtn.textContent = monacoEnabled ? 'Monaco ON' : 'Monaco OFF';
+
+  if(monacoEnabled){
+    document.getElementById('editor').style.display='block';
+    mobileEditor.style.display='none';
+    editor.setValue(mobileEditor.value || editor.getValue());
+  }else{
+    mobileEditor.value = editor.getValue();
+    document.getElementById('editor').style.display='none';
+    mobileEditor.style.display='block';
+    mobileEditor.focus();
+  }
+}
+
+/* ===== HELPERS ===== */
+function getCode(){
+  return monacoEnabled ? editor.getValue() : mobileEditor.value;
+}
+
+/* ===== FUNCTIONS ===== */
+async function pasteCode(){
+  const t = await navigator.clipboard.readText();
+  if(monacoEnabled){
+    editor.executeEdits('',[
+      {range:editor.getModel().getFullModelRange(),text:editor.getValue()+t}
+    ]);
+  }else{
+    mobileEditor.value += t;
+  }
+}
+
+/* ✅ FIXED CLEAR (UNDO SAFE) */
+function clearCode(){
+  if(monacoEnabled){
+    editor.pushUndoStop();
+    editor.executeEdits('',[
+      { range: editor.getModel().getFullModelRange(), text: '' }
+    ]);
+    editor.pushUndoStop();
+  }else{
+    mobileEditor.value = '';
+  }
+}
+
+function copyAllCode(){
+  navigator.clipboard.writeText(getCode());
+  copyToast.classList.add('show');
+  setTimeout(()=>copyToast.classList.remove('show'),1000);
+}
+
+function undoCode(){
+  if(monacoEnabled) editor.trigger('keyboard','undo');
+}
+
+function redoCode(){
+  if(monacoEnabled) editor.trigger('keyboard','redo');
+}
+
+function findText(q){
+  if(q && monacoEnabled){
+    editor.trigger('keyboard','actions.find',{searchString:q});
+  }
+}
+
+function runCode(){
+  output.srcdoc = getCode();
+  runner.style.display='flex';
+}
+function refreshRun(){ output.srcdoc = output.srcdoc; }
+function closeRun(){ runner.style.display='none'; }
+
+/* ===== BUTTON GLOW ===== */
+document.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('touchstart',()=>btn.classList.add('btn-pressed'),{passive:true});
+  btn.addEventListener('touchend',()=>setTimeout(()=>btn.classList.remove('btn-pressed'),120));
+});
+</script>
+
+</body>
+</html>
